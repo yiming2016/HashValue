@@ -6,8 +6,10 @@
 #include <QMap>
 #include <QMainWindow>
 #include <QProcess>
+#include <QVector>
 
 class QLabel;
+class QTimer;
 class QComboBox;
 class QLineEdit;
 class QPushButton;
@@ -15,9 +17,17 @@ class QTextEdit;
 class QCheckBox;
 class QFrame;
 class QVBoxLayout;
+class QTabWidget;
+class QTableWidget;
+class QProgressBar;
 
 struct ParamRow
 {
+    ParamRow()
+        : label(0), lineEdit(0), checkBox(0), browseButton(0),
+          requiredMark(0), type(TEXT_PARAM)
+    {
+    }
     QLabel            *label;
     QLineEdit         *lineEdit;
     QCheckBox         *checkBox;
@@ -25,6 +35,21 @@ struct ParamRow
     QLabel            *requiredMark;
     ScriptParameterType type;
     QString             commandLinePrefix;
+};
+
+struct BatchItem
+{
+    int         id;
+    QString     filePath;
+    QString     category;
+    QString     format;
+    QString     hashcatMode;
+    QString     hash;
+    QString     outputSuffix;
+    QString     outputDir;
+    QString     outputPath;
+    QString     status;
+    QString     error;
 };
 
 class MainWindow : public QMainWindow
@@ -50,6 +75,17 @@ private slots:
     void conversionFinished(int exitCode, QProcess::ExitStatus status);
     void copyResult();
     void browseParamFile();
+    void addBatchFiles();
+    void removeSelectedBatchRows();
+    void clearBatch();
+    void startBatchConversion();
+    void batchConversionFinished(int exitCode, QProcess::ExitStatus status);
+    void batchSuffixChanged(int index);
+    void browseBatchLocation();
+    void batchCellClicked(int row, int column);
+    void batchCellDoubleClicked(int row, int column);
+    void showBatchRowMenu(const QPoint &pos);
+    void sendCurrentToBatch();
 
 private:
     void buildUi();
@@ -60,9 +96,22 @@ private:
     void setStatus(const QString &text, bool error = false);
     void updateHashcatLabel();
     QString currentSuffix() const;
+    QString guessFormatForFile(const QString &file) const;
+    bool buildConversionCommand(const QString &inputFile,
+                                const QString &formatName, QString &program,
+                                QStringList &args, QString &error);
+    void addBatchItems(const QStringList &files);
+    void refreshBatchTable();
+    void updateBatchSuffixCombo();
+    void updateBatchLocationLabel();
+    void runNextBatchItem();
+    void loadItemForDetailedSettings(int index);
+    int batchItemIndexById(int id) const;
+    void setBatchItemStatus(int id, const QString &status,
+                            const QString &error = QString());
+    void finishBatch();
+    void showToast(const QString &text, bool success = true);
 
-    QLabel          *m_fileLabel;
-    QFrame          *m_dropArea;
     QLineEdit       *m_inputFileEdit;
     QPushButton     *m_browseInputButton;
     QComboBox       *m_formatCombo;
@@ -73,6 +122,7 @@ private:
     QLineEdit       *m_outputEdit;
     QComboBox       *m_outputSuffixCombo;
     QPushButton     *m_browseOutputButton;
+    QPushButton     *m_sendButton;
     QPushButton     *m_scanButton;
     QPushButton     *m_convertButton;
     QTextEdit       *m_resultText;
@@ -80,6 +130,17 @@ private:
     QLabel          *m_statusLabel;
     QLineEdit       *m_jtrDirEdit;
     QPushButton     *m_browseJtrButton;
+    QTabWidget      *m_tabs;
+    QTableWidget    *m_batchTable;
+    QPushButton     *m_batchAddButton;
+    QPushButton     *m_batchRemoveButton;
+    QPushButton     *m_batchClearButton;
+    QPushButton     *m_batchConvertButton;
+    QComboBox       *m_batchSuffixCombo;
+    QPushButton     *m_batchLocationButton;
+    QProgressBar    *m_batchProgress;
+    QLabel          *m_toast;
+    QTimer          *m_toastTimer;
 
     QMap<QString, ConversionScript> m_scripts;
     QList<QPair<QString, QStringList> > m_categories;
@@ -87,6 +148,12 @@ private:
     QStringList                     m_discoveredScripts;
     QProcess                        m_process;
     bool                            m_converting;
+    QVector<BatchItem>              m_batchItems;
+    QProcess                        m_batchProcess;
+    bool                            m_batchRunning;
+    bool                            m_batchRefreshing;
+    int                             m_batchItemIdCounter;
+    int                             m_batchCurrentId;
 };
 
 #endif // MAINWINDOW_H

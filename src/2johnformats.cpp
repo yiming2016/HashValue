@@ -91,9 +91,14 @@ void declare2johnFormats(QList<ConversionScript> &scripts)
                                 << ConversionScriptParameter("GPG 私钥文件",
                                                              FILE_PARAM))
 
-        << ConversionScript("hccap2john", ".py",
+        << ConversionScript("hccap2john", "",
                             QList<ConversionScriptParameter>()
                                 << ConversionScriptParameter("hccap 文件",
+                                                             FILE_PARAM))
+
+        << ConversionScript("hccapx2john", ".py",
+                            QList<ConversionScriptParameter>()
+                                << ConversionScriptParameter("hccapx 文件",
                                                              FILE_PARAM))
 
         << ConversionScript("htdigest2john", ".py",
@@ -258,7 +263,7 @@ void declare2johnFormats(QList<ConversionScript> &scripts)
                                 << ConversionScriptParameter("输入文件",
                                                              FILE_PARAM)
                                 << ConversionScriptParameter(
-                                       "提取 SAP CODVN(A|B|D|E|F|H) 哈希：默认为 BFE",
+                                       "提取 SAP CODVN(A|B|D|E|F|H) 哈希默认为 BFE",
                                        TEXT_PARAM))
 
         << ConversionScript("sipdump2john", ".py",
@@ -296,11 +301,6 @@ void declare2johnFormats(QList<ConversionScript> &scripts)
         << ConversionScript("uaf2john", "",
                             QList<ConversionScriptParameter>()
                                 << ConversionScriptParameter("uaf 文件",
-                                                             FILE_PARAM))
-
-        << ConversionScript("vncpcap2john", "",
-                            QList<ConversionScriptParameter>()
-                                << ConversionScriptParameter("pcap 抓包文件",
                                                              FILE_PARAM))
 
         << ConversionScript("wpapcap2john", "",
