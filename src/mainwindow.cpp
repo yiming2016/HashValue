@@ -121,6 +121,11 @@ MainWindow::MainWindow(QWidget *parent)
     {
         addDiscoveredFormat(base);
     }
+    // Restore the output suffix choice.
+    QString savedSuffix = settings.value("outputSuffix").toString();
+    int suffixIndex = m_outputSuffixCombo->findText(savedSuffix);
+    if(suffixIndex >= 0)
+        m_outputSuffixCombo->setCurrentIndex(suffixIndex);
 }
 
 void MainWindow::buildUi()
@@ -228,9 +233,17 @@ void MainWindow::buildUi()
     QHBoxLayout *outputRow = new QHBoxLayout();
     m_outputEdit = new QLineEdit(outputCard);
     m_outputEdit->setPlaceholderText(
-        QStringLiteral("输出 .txt 文件路径（默认与源文件同目录）"));
+        QStringLiteral("输出哈希文件路径（默认与源文件同目录）"));
+    m_outputSuffixCombo = new QComboBox(outputCard);
+    m_outputSuffixCombo->addItem(QStringLiteral(".txt"));
+    m_outputSuffixCombo->addItem(QStringLiteral(".lst"));
+    m_outputSuffixCombo->addItem(QStringLiteral(".hash"));
+    m_outputSuffixCombo->addItem(QStringLiteral("无后缀"));
+    m_outputSuffixCombo->setToolTip(
+        QStringLiteral("输出哈希文件的后缀（内容均为纯文本哈希）"));
     m_browseOutputButton = new QPushButton(QStringLiteral("浏览…"), outputCard);
     outputRow->addWidget(m_outputEdit, 1);
+    outputRow->addWidget(m_outputSuffixCombo);
     outputRow->addWidget(m_browseOutputButton);
     outputLayout->addLayout(outputRow);
     root->addWidget(outputCard);
@@ -295,6 +308,8 @@ void MainWindow::buildUi()
             SLOT(browseInputFile()));
     connect(m_browseOutputButton, SIGNAL(clicked()), this,
             SLOT(browseOutputFile()));
+    connect(m_outputSuffixCombo, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(outputSuffixChanged(int)));
     connect(m_browseJtrButton, SIGNAL(clicked()), this, SLOT(browseJtrDir()));
     connect(m_inputFileEdit, &QLineEdit::textChanged, this,
             &MainWindow::guessFormatFromFile);
@@ -638,7 +653,7 @@ void MainWindow::guessFormatFromFile()
     {
         QFileInfo info(file);
         m_outputEdit->setText(info.absolutePath() + "/" +
-                              info.completeBaseName() + ".txt");
+                              info.completeBaseName() + currentSuffix());
     }
 }
 
@@ -682,7 +697,39 @@ void MainWindow::browseOutputFile()
         this, QStringLiteral("保存哈希文件"),
         m_outputEdit->text(), QStringLiteral("文本文件 (*.txt)"));
     if(!file.isEmpty())
+    {
         m_outputEdit->setText(file);
+        outputSuffixChanged(0);
+    }
+}
+
+QString MainWindow::currentSuffix() const
+{
+    if(!m_outputSuffixCombo)
+        return QStringLiteral(".txt");
+    QString text = m_outputSuffixCombo->currentText();
+    if(text == QStringLiteral("无后缀"))
+        return QString();
+    return text;
+}
+
+void MainWindow::outputSuffixChanged(int)
+{
+    QString out = m_outputEdit->text().trimmed();
+    if(!out.isEmpty())
+    {
+        QFileInfo info(out);
+        QString dir = info.path();
+        QString base = info.completeBaseName();
+        QString newPath = (dir == QStringLiteral("."))
+                              ? base
+                              : dir + "/" + base;
+        m_outputEdit->setText(newPath + currentSuffix());
+    }
+    QSettings settings(QCoreApplication::applicationDirPath() +
+                           QStringLiteral("/HashValue.ini"),
+                       QSettings::IniFormat);
+    settings.setValue("outputSuffix", m_outputSuffixCombo->currentText());
 }
 
 void MainWindow::browseJtrDir()

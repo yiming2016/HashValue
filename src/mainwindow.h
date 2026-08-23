@@ -41,6 +41,7 @@ protected:
 private slots:
     void browseInputFile();
     void browseOutputFile();
+    void outputSuffixChanged(int index);
     void browseJtrDir();
     void categoryChanged(int index);
     void formatChanged(int index);
@@ -58,6 +59,7 @@ private:
     bool addDiscoveredFormat(const QString &scriptBase);
     void setStatus(const QString &text, bool error = false);
     void updateHashcatLabel();
+    QString currentSuffix() const;
 
     QLabel          *m_fileLabel;
     QFrame          *m_dropArea;
@@ -69,6 +71,7 @@ private:
     QVBoxLayout     *m_paramsLayout;
     QWidget         *m_paramsCard;
     QLineEdit       *m_outputEdit;
+    QComboBox       *m_outputSuffixCombo;
     QPushButton     *m_browseOutputButton;
     QPushButton     *m_scanButton;
     QPushButton     *m_convertButton;
