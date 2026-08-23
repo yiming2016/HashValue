@@ -32,15 +32,17 @@ public:
 class ConversionScript
 {
 public:
-    ConversionScript() {}
+    ConversionScript() : generic(false) {}
     ConversionScript(const QString &name, const QString &extension,
                      const QList<ConversionScriptParameter> &parameters)
-        : name(name), extension(extension), parameters(parameters)
+        : name(name), extension(extension), parameters(parameters),
+          generic(false)
     {
     }
     QString                          name;
     QString                          extension;
     QList<ConversionScriptParameter> parameters;
+    bool                             generic;
 };
 
 void declare2johnFormats(QList<ConversionScript> &scripts);

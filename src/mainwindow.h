@@ -44,6 +44,7 @@ private slots:
     void browseJtrDir();
     void categoryChanged(int index);
     void formatChanged(int index);
+    void scanNewFormats();
     void convert();
     void conversionFinished(int exitCode, QProcess::ExitStatus status);
     void copyResult();
@@ -54,6 +55,7 @@ private:
     void rebuildParameterRows();
     void guessFormatFromFile();
     void populateFormatCombo();
+    bool addDiscoveredFormat(const QString &scriptBase);
     void setStatus(const QString &text, bool error = false);
     void updateHashcatLabel();
 
@@ -68,6 +70,7 @@ private:
     QWidget         *m_paramsCard;
     QLineEdit       *m_outputEdit;
     QPushButton     *m_browseOutputButton;
+    QPushButton     *m_scanButton;
     QPushButton     *m_convertButton;
     QTextEdit       *m_resultText;
     QPushButton     *m_copyButton;
@@ -78,6 +81,7 @@ private:
     QMap<QString, ConversionScript> m_scripts;
     QList<QPair<QString, QStringList> > m_categories;
     QList<ParamRow>                 m_paramRows;
+    QStringList                     m_discoveredScripts;
     QProcess                        m_process;
     bool                            m_converting;
 };

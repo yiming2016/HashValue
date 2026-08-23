@@ -113,6 +113,13 @@ MainWindow::MainWindow(QWidget *parent)
     {
         setStatus(QStringLiteral("独立运行模式：正在使用内置 run 目录"));
     }
+
+    // Restore previously discovered formats (persisted in the ini).
+    QStringList discovered = settings.value("discoveredFormats").toStringList();
+    foreach(const QString &base, discovered)
+    {
+        addDiscoveredFormat(base);
+    }
 }
 
 void MainWindow::buildUi()
@@ -191,11 +198,13 @@ void MainWindow::buildUi()
     m_hashcatLabel = new QLabel(QStringLiteral("hashcat：—"), formatCard);
     m_hashcatLabel->setStyleSheet(
         QStringLiteral("color: #4a6cf7; font-weight: bold;"));
+    m_scanButton = new QPushButton(QStringLiteral("扫描新格式"), formatCard);
     formatRow->addWidget(categoryLabel);
     formatRow->addWidget(m_categoryCombo);
     formatRow->addWidget(formatLabel);
     formatRow->addWidget(m_formatCombo);
     formatRow->addWidget(m_hashcatLabel);
+    formatRow->addWidget(m_scanButton);
     formatRow->addStretch(1);
     formatLayout->addLayout(formatRow);
 
@@ -293,6 +302,7 @@ void MainWindow::buildUi()
             SLOT(categoryChanged(int)));
     connect(m_formatCombo, SIGNAL(currentIndexChanged(int)), this,
             SLOT(formatChanged(int)));
+    connect(m_scanButton, SIGNAL(clicked()), this, SLOT(scanNewFormats()));
     m_categoryCombo->setCurrentIndex(0);
     populateFormatCombo();
     connect(m_convertButton, SIGNAL(clicked()), this, SLOT(convert()));
@@ -407,8 +417,134 @@ void MainWindow::formatChanged(int)
 void MainWindow::updateHashcatLabel()
 {
     QString name = m_formatCombo->currentText();
-    m_hashcatLabel->setText(QStringLiteral("hashcat：") +
-                            hashcatModeFor2johnScript(name));
+    QString mode = hashcatModeFor2johnScript(name);
+    if(mode == QStringLiteral("—"))
+    {
+        m_hashcatLabel->setText(
+            QStringLiteral("hashcat：未知（请查 hashcat 手册）"));
+    }
+    else
+    {
+        m_hashcatLabel->setText(QStringLiteral("hashcat：") + mode);
+    }
+}
+
+bool MainWindow::addDiscoveredFormat(const QString &scriptBase)
+{
+    if(scriptBase.isEmpty())
+        return false;
+    if(m_discoveredScripts.contains(scriptBase))
+        return false;
+    QString display = scriptBase;
+    display.replace(QRegExp("2john|.py|.pl"), "");
+    if(m_scripts.contains(display))
+        return false;
+
+    QString runDir = m_jtrDirEdit->text().trimmed();
+    QString ext;
+    if(QFile::exists(runDir + "/" + scriptBase + ".py"))
+        ext = ".py";
+    else if(QFile::exists(runDir + "/" + scriptBase + ".pl"))
+        ext = ".pl";
+    else if(QFile::exists(runDir + "/" + scriptBase + ".exe") ||
+            QFile::exists(runDir + "/" + scriptBase))
+        ext = "";
+    else
+        return false; // script not present in the run dir
+
+    ConversionScript script(
+        scriptBase, ext,
+        QList<ConversionScriptParameter>()
+            << ConversionScriptParameter("输入文件", FILE_PARAM)
+            << ConversionScriptParameter("附加参数（可选，按脚本用法填写）",
+                                         TEXT_PARAM));
+    script.generic = true;
+    m_scripts.insert(display, script);
+    m_discoveredScripts.append(scriptBase);
+
+    // Make sure the "新发现" category exists and contains this format.
+    bool hasCategory = false;
+    for(int i = 0; i < m_categories.size(); i++)
+    {
+        if(m_categories[i].first == QStringLiteral("新发现"))
+            hasCategory = true;
+    }
+    if(!hasCategory)
+        m_categories.append(
+            qMakePair(QStringLiteral("新发现"), QStringList()));
+    for(int i = 0; i < m_categories.size(); i++)
+    {
+        if(m_categories[i].first == QStringLiteral("新发现"))
+            m_categories[i].second.append(display);
+    }
+
+    // Refresh the category combo (keep the current selection).
+    QString currentCategory = m_categoryCombo->currentText();
+    m_categoryCombo->blockSignals(true);
+    m_categoryCombo->clear();
+    for(const auto &cat : m_categories)
+    {
+        m_categoryCombo->addItem(cat.first);
+    }
+    int idx = m_categoryCombo->findText(currentCategory);
+    m_categoryCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    m_categoryCombo->blockSignals(false);
+    populateFormatCombo();
+    return true;
+}
+
+void MainWindow::scanNewFormats()
+{
+    QString runDir = m_jtrDirEdit->text().trimmed();
+    if(runDir.isEmpty())
+    {
+        QMessageBox::information(this, QStringLiteral("扫描新格式"),
+                                 QStringLiteral("请先设置 JtR 目录。"));
+        return;
+    }
+
+    QDir dir(runDir);
+    QStringList allFiles = dir.entryList(QDir::Files, QDir::Name);
+    QSet<QString> knownScripts;
+    foreach(const ConversionScript &script, m_scripts)
+    {
+        knownScripts << script.name;
+    }
+
+    QStringList newlyFound;
+    foreach(const QString &file, allFiles)
+    {
+        if(!file.contains(QStringLiteral("2john"), Qt::CaseInsensitive))
+            continue;
+        QString base = QFileInfo(file).completeBaseName();
+        if(base.isEmpty())
+            continue;
+        if(knownScripts.contains(base) ||
+           m_discoveredScripts.contains(base))
+            continue;
+        if(addDiscoveredFormat(base))
+            newlyFound << base;
+    }
+
+    QSettings settings(QCoreApplication::applicationDirPath() +
+                           QStringLiteral("/HashValue.ini"),
+                       QSettings::IniFormat);
+    settings.setValue("discoveredFormats", m_discoveredScripts);
+
+    if(newlyFound.isEmpty())
+    {
+        QMessageBox::information(
+            this, QStringLiteral("扫描新格式"),
+            QStringLiteral("没有发现新的 2john 脚本。"));
+    }
+    else
+    {
+        QMessageBox::information(
+            this, QStringLiteral("扫描新格式"),
+            QStringLiteral("发现 %1 个新格式：\n%2")
+                .arg(newlyFound.size())
+                .arg(newlyFound.join(QStringLiteral("、"))));
+    }
 }
 
 void MainWindow::guessFormatFromFile()
@@ -685,7 +821,17 @@ void MainWindow::convert()
             {
                 if(!row.commandLinePrefix.isEmpty())
                     args << row.commandLinePrefix;
-                args << value;
+                if(script.generic && row.type == TEXT_PARAM)
+                {
+                    // Generic extra args: split on whitespace so options
+                    // like "-o out.txt" are passed as separate arguments.
+                    args << value.split(QRegExp("\\s+"),
+                                        QString::SkipEmptyParts);
+                }
+                else
+                {
+                    args << value;
+                }
             }
             bool required =
                 (row.type != CHECKABLE_PARAM) &&
