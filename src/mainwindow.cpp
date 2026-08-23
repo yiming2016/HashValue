@@ -22,6 +22,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTextEdit>
+#include <QTextOption>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QtAlgorithms>
@@ -265,6 +266,7 @@ void MainWindow::buildUi()
     m_resultText = new QTextEdit(resultCard);
     m_resultText->setReadOnly(true);
     m_resultText->setMinimumHeight(120);
+    m_resultText->setWordWrapMode(QTextOption::WrapAnywhere);
     m_resultText->setPlaceholderText(
         QStringLiteral("提取出的哈希会显示在这里…"));
     resultLayout->addWidget(m_resultText);
@@ -274,6 +276,8 @@ void MainWindow::buildUi()
     QHBoxLayout *bottomRow = new QHBoxLayout();
     m_statusLabel = new QLabel(QStringLiteral("就绪"), central);
     m_statusLabel->setStyleSheet(QStringLiteral("color: #5a6478;"));
+    // Long status text must not force the window to grow.
+    m_statusLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     bottomRow->addWidget(m_statusLabel, 1);
     QLabel *jtrLabel = new QLabel(QStringLiteral("JtR 目录："), central);
     m_jtrDirEdit = new QLineEdit(central);
@@ -330,8 +334,26 @@ void MainWindow::rebuildParameterRows()
         return;
     const ConversionScript &script = m_scripts[scriptName];
 
-    foreach(const ConversionScriptParameter &param, script.parameters)
+    // The first required main-input FILE/FOLDER parameter duplicates the
+    // top "选择加密文件" field, so hide it (it is still auto-filled).
+    int mainInputIndex = -1;
+    for(int i = 0; i < script.parameters.size(); i++)
     {
+        const ConversionScriptParameter &p = script.parameters[i];
+        bool required =
+            (p.type != CHECKABLE_PARAM) && p.commandLinePrefix.isEmpty() &&
+            !p.name.contains(QStringLiteral("（可选）")) &&
+            !p.name.contains(QStringLiteral("(Optional)"));
+        if(required && (p.type == FILE_PARAM || p.type == FOLDER_PARAM))
+        {
+            mainInputIndex = i;
+            break;
+        }
+    }
+
+    for(int i = 0; i < script.parameters.size(); i++)
+    {
+        const ConversionScriptParameter &param = script.parameters[i];
         QWidget *row = new QWidget(m_paramsCard);
         QHBoxLayout *lay = new QHBoxLayout(row);
         lay->setContentsMargins(0, 0, 0, 0);
@@ -379,6 +401,8 @@ void MainWindow::rebuildParameterRows()
         }
 
         m_paramsLayout->addWidget(row);
+        if(i == mainInputIndex)
+            row->hide();
         m_paramRows.append(pr);
     }
 }
