@@ -74,14 +74,24 @@ MainWindow::MainWindow(QWidget *parent)
     buildUi();
     setAcceptDrops(true);
 
-    // Restore settings
+    // Standalone mode: prefer the bundled run folder next to the executable.
     QSettings settings(QCoreApplication::applicationDirPath() +
                            QStringLiteral("/HashValue.ini"),
                        QSettings::IniFormat);
-    QString jtrDir = settings.value("jtrDir").toString();
+    QString bundled = QCoreApplication::applicationDirPath() + "/run";
+    QString jtrDir;
+    if(QFile::exists(bundled + "/zip2john.exe") ||
+       QFile::exists(bundled + "/zip2john") ||
+       QFile::exists(bundled + "/john.exe") ||
+       QFile::exists(bundled + "/john"))
+    {
+        jtrDir = bundled;
+    }
+    if(jtrDir.isEmpty())
+        jtrDir = settings.value("jtrDir").toString();
     if(jtrDir.isEmpty())
     {
-        // Try to auto-detect a run folder next to the app or in Downloads.
+        // Fallback: try common locations.
         QStringList candidates;
         candidates << QCoreApplication::applicationDirPath() + "/run"
                    << QCoreApplication::applicationDirPath() + "/JtR/run"
@@ -97,6 +107,12 @@ MainWindow::MainWindow(QWidget *parent)
         }
     }
     m_jtrDirEdit->setText(jtrDir);
+    if(!jtrDir.isEmpty() &&
+       QFileInfo(jtrDir).absoluteFilePath() ==
+           QFileInfo(bundled).absoluteFilePath())
+    {
+        setStatus(QStringLiteral("独立运行模式：正在使用内置 run 目录"));
+    }
 }
 
 void MainWindow::buildUi()

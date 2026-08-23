@@ -5,15 +5,15 @@ HashValue 哈希提取工具（Windows x64 便携版）
 
 运行：
   1. 双击 HashValue.exe。
-  2. 首次使用：点击右下角“选择…”，指定 john-packages 解压后
-     的 run 目录（包含 john.exe 和 2john 脚本）。
-     下载：https://github.com/openwall/john-packages/releases
-  3. 将加密文件拖入窗口，确认格式与 hashcat 模式号。
+  2. 程序已内置 JtR 的 run 目录，独立运行，无需额外配置；
+     如需更换，可点击右下角“选择…”重新指定。
+  3. 将加密文件拖入窗口，确认类别/格式与 hashcat 模式号。
   4. 点击“提取哈希”，复制结果或使用输出的 .txt 文件。
   5. 破解：hashcat -m <模式号> 输出文件.txt 密码字典.txt
 
 说明：
-  - 部分格式（.py/.pl 脚本）需要安装 Python 或 Perl。
+  - 部分格式（.py/.pl 脚本，如 7z2john、pdf2john）需要系统安装 Python 或 Perl；
+    其余（zip、rar 等自带 exe 的格式）开箱即用。
   - 程序为便携版，配置保存在同目录 HashValue.ini；
     删除整个文件夹即可卸载。
 
