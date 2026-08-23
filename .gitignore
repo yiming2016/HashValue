@@ -1,0 +1,12 @@
+release/
+debug/
+Makefile
+Makefile.Release
+Makefile.Debug
+.qmake.stash
+*.o
+*.obj
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+HashValue.ini
