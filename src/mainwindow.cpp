@@ -236,6 +236,8 @@ void MainWindow::buildUi()
     connect(m_browseOutputButton, SIGNAL(clicked()), this,
             SLOT(browseOutputFile()));
     connect(m_browseJtrButton, SIGNAL(clicked()), this, SLOT(browseJtrDir()));
+    connect(m_inputFileEdit, &QLineEdit::textChanged, this,
+            &MainWindow::guessFormatFromFile);
     connect(m_formatCombo, SIGNAL(currentIndexChanged(int)), this,
             SLOT(formatChanged(int)));
     connect(m_convertButton, SIGNAL(clicked()), this, SLOT(convert()));
@@ -371,7 +373,15 @@ void MainWindow::guessFormatFromFile()
     {
         int index = m_formatCombo->findText(guess);
         if(index >= 0)
+        {
             m_formatCombo->setCurrentIndex(index);
+            setStatus(QStringLiteral("已识别格式：%1").arg(guess));
+        }
+    }
+
+    if(!file.isEmpty())
+    {
+        m_fileLabel->setText(QFileInfo(file).fileName());
     }
 
     // Suggest an output file next to the source.
@@ -547,15 +557,20 @@ void MainWindow::convert()
         return;
     }
 
-    // Auto-fill the first empty FILE/FOLDER parameter with the input file.
+    // Auto-fill the first REQUIRED empty FILE/FOLDER parameter with the input file.
     bool filled = false;
     for(int i = 0; i < m_paramRows.size(); i++)
     {
         if(i >= script.parameters.size())
             break;
         const ParamRow &row = m_paramRows[i];
+        bool required =
+            (row.type != CHECKABLE_PARAM) &&
+            row.commandLinePrefix.isEmpty() &&
+            !row.label->text().contains(QStringLiteral("（可选）")) &&
+            !row.label->text().contains(QStringLiteral("(Optional)"));
         if((row.type == FILE_PARAM || row.type == FOLDER_PARAM) &&
-           row.lineEdit->text().trimmed().isEmpty() && !filled)
+           required && row.lineEdit->text().trimmed().isEmpty() && !filled)
         {
             m_paramRows[i].lineEdit->setText(inputFile);
             filled = true;
@@ -631,15 +646,22 @@ void MainWindow::conversionFinished(int exitCode, QProcess::ExitStatus)
         return;
     }
 
-    // Strip the "filename:" prefix so hashcat can use the hash directly.
-    QString inputFile = m_inputFileEdit->text().trimmed();
-    QString prefix = QFileInfo(inputFile).fileName() + ":";
+    // Clean each line so hashcat can use the hash directly:
+    // drop any "filename:..." prefix and trailing file-info text.
     QString cleaned;
     foreach(const QString &rawLine, out.split(QRegExp("\\r?\\n")))
     {
-        QString line = rawLine;
-        if(line.startsWith(prefix))
-            line.remove(0, prefix.length());
+        QString line = rawLine.trimmed();
+        if(line.isEmpty())
+            continue;
+        int dollar = line.indexOf('$');
+        if(dollar >= 0)
+        {
+            line = line.mid(dollar);
+            int endMarker = line.indexOf(QStringLiteral("$/pkzip$"));
+            if(endMarker >= 0)
+                line = line.left(endMarker + 8);
+        }
         cleaned += line + "\n";
     }
     cleaned = cleaned.trimmed() + "\n";
