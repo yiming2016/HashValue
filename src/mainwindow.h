@@ -42,6 +42,7 @@ private slots:
     void browseInputFile();
     void browseOutputFile();
     void browseJtrDir();
+    void categoryChanged(int index);
     void formatChanged(int index);
     void convert();
     void conversionFinished(int exitCode, QProcess::ExitStatus status);
@@ -52,6 +53,7 @@ private:
     void buildUi();
     void rebuildParameterRows();
     void guessFormatFromFile();
+    void populateFormatCombo();
     void setStatus(const QString &text, bool error = false);
     void updateHashcatLabel();
 
@@ -60,6 +62,7 @@ private:
     QLineEdit       *m_inputFileEdit;
     QPushButton     *m_browseInputButton;
     QComboBox       *m_formatCombo;
+    QComboBox       *m_categoryCombo;
     QLabel          *m_hashcatLabel;
     QVBoxLayout     *m_paramsLayout;
     QWidget         *m_paramsCard;
@@ -73,6 +76,7 @@ private:
     QPushButton     *m_browseJtrButton;
 
     QMap<QString, ConversionScript> m_scripts;
+    QList<QPair<QString, QStringList> > m_categories;
     QList<ParamRow>                 m_paramRows;
     QProcess                        m_process;
     bool                            m_converting;

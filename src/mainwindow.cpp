@@ -42,6 +42,35 @@ MainWindow::MainWindow(QWidget *parent)
         m_scripts.insert(name, script);
     }
 
+    // Format categories: category -> format display names.
+    m_categories << qMakePair(QStringLiteral("压缩包"),
+                              QStringList() << "zip" << "7z" << "rar");
+    m_categories << qMakePair(
+        QStringLiteral("办公文档/PDF"),
+        QStringList() << "office" << "pdf" << "odf" << "sxc" << "lotus");
+    m_categories << qMakePair(
+        QStringLiteral("密码管理器"),
+        QStringList() << "keepass" << "1password" << "lastpass" << "pwsafe"
+                      << "keychain" << "keyring" << "kwallet" << "mozilla");
+    m_categories << qMakePair(
+        QStringLiteral("磁盘/加密容器"),
+        QStringList() << "luks" << "truecrypt" << "dmg" << "encfs"
+                      << "ecryptfs" << "androidfde" << "openbsd_softraid");
+    m_categories << qMakePair(QStringLiteral("加密货币钱包"),
+                              QStringList() << "bitcoin" << "blockchain");
+    m_categories << qMakePair(
+        QStringLiteral("密钥/证书"),
+        QStringList() << "ssh" << "sshng" << "putty" << "pfx" << "keystore"
+                      << "gpg" << "openssl");
+    m_categories << qMakePair(
+        QStringLiteral("系统/网络/其他"),
+        QStringList() << "unshadow" << "unafs" << "aix" << "cracf"
+                      << "htdigest" << "krbpa" << "ikescan" << "sap" << "racf"
+                      << "mcafee_epo" << "sipdump" << "kdcdump"
+                      << "known_hosts" << "uaf" << "strip" << "lion"
+                      << "ml2john" << "apex" << "hccap" << "wpapcap"
+                      << "vncpcap");
+
     buildUi();
     setAcceptDrops(true);
 
@@ -137,15 +166,17 @@ void MainWindow::buildUi()
     formatLayout->addWidget(step2);
 
     QHBoxLayout *formatRow = new QHBoxLayout();
+    QLabel *categoryLabel = new QLabel(QStringLiteral("类别："), formatCard);
+    m_categoryCombo = new QComboBox(formatCard);
+    m_categoryCombo->setMinimumWidth(150);
     QLabel *formatLabel = new QLabel(QStringLiteral("文件格式："), formatCard);
     m_formatCombo = new QComboBox(formatCard);
-    m_formatCombo->setMinimumWidth(220);
-    QStringList names = m_scripts.keys();
-    qSort(names);
-    m_formatCombo->addItems(names);
+    m_formatCombo->setMinimumWidth(200);
     m_hashcatLabel = new QLabel(QStringLiteral("hashcat：—"), formatCard);
     m_hashcatLabel->setStyleSheet(
         QStringLiteral("color: #4a6cf7; font-weight: bold;"));
+    formatRow->addWidget(categoryLabel);
+    formatRow->addWidget(m_categoryCombo);
     formatRow->addWidget(formatLabel);
     formatRow->addWidget(m_formatCombo);
     formatRow->addWidget(m_hashcatLabel);
@@ -238,8 +269,16 @@ void MainWindow::buildUi()
     connect(m_browseJtrButton, SIGNAL(clicked()), this, SLOT(browseJtrDir()));
     connect(m_inputFileEdit, &QLineEdit::textChanged, this,
             &MainWindow::guessFormatFromFile);
+    for(const auto &cat : m_categories)
+    {
+        m_categoryCombo->addItem(cat.first);
+    }
+    connect(m_categoryCombo, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(categoryChanged(int)));
     connect(m_formatCombo, SIGNAL(currentIndexChanged(int)), this,
             SLOT(formatChanged(int)));
+    m_categoryCombo->setCurrentIndex(0);
+    populateFormatCombo();
     connect(m_convertButton, SIGNAL(clicked()), this, SLOT(convert()));
     connect(m_copyButton, SIGNAL(clicked()), this, SLOT(copyResult()));
     connect(&m_process, SIGNAL(finished(int, QProcess::ExitStatus)), this,
@@ -318,6 +357,31 @@ void MainWindow::rebuildParameterRows()
     }
 }
 
+void MainWindow::categoryChanged(int)
+{
+    populateFormatCombo();
+}
+
+void MainWindow::populateFormatCombo()
+{
+    QString previous = m_formatCombo->currentText();
+    m_formatCombo->blockSignals(true);
+    m_formatCombo->clear();
+    int cat = m_categoryCombo->currentIndex();
+    if(cat >= 0 && cat < m_categories.size())
+    {
+        foreach(const QString &name, m_categories[cat].second)
+        {
+            if(m_scripts.contains(name))
+                m_formatCombo->addItem(name);
+        }
+    }
+    int idx = m_formatCombo->findText(previous);
+    m_formatCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    m_formatCombo->blockSignals(false);
+    formatChanged(0);
+}
+
 void MainWindow::formatChanged(int)
 {
     rebuildParameterRows();
@@ -371,6 +435,15 @@ void MainWindow::guessFormatFromFile()
 
     if(!guess.isEmpty())
     {
+        // Switch to the category that contains the guessed format.
+        for(int c = 0; c < m_categories.size(); c++)
+        {
+            if(m_categories[c].second.contains(guess))
+            {
+                m_categoryCombo->setCurrentIndex(c);
+                break;
+            }
+        }
         int index = m_formatCombo->findText(guess);
         if(index >= 0)
         {
