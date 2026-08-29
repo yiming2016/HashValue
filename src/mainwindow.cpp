@@ -350,19 +350,37 @@ void MainWindow::buildUi()
     inputLayout->setContentsMargins(16, 14, 16, 14);
     inputLayout->setSpacing(10);
 
-    QHBoxLayout *fileRow = new QHBoxLayout();
-    QLabel *filePosLabel = new QLabel(QStringLiteral("文件位置"), m_paramsCard);
-    filePosLabel->setStyleSheet(
+    // 标签单独一行（含红色必填星号），输入框在下方、间距更近。
+    m_fileLabel = new QLabel(QStringLiteral("文件位置"), m_paramsCard);
+    m_fileLabel->setStyleSheet(
         QStringLiteral("font-weight: bold; color: #000000;"));
+    m_fileRequiredMark = new QLabel(QStringLiteral("*"), m_paramsCard);
+    m_fileRequiredMark->setStyleSheet(
+        QStringLiteral("color: #e53935; font-weight: bold;"));
+    QHBoxLayout *fileLabelRow = new QHBoxLayout();
+    fileLabelRow->setSpacing(2);
+    fileLabelRow->addWidget(m_fileLabel);
+    fileLabelRow->addWidget(m_fileRequiredMark);
+    fileLabelRow->addStretch(1);
     m_inputFileEdit = new QLineEdit(m_paramsCard);
     m_inputFileEdit->setAcceptDrops(false);
     m_inputFileEdit->setPlaceholderText(
         QStringLiteral("例如 C:\\加密文件\\123.zip"));
     m_browseInputButton = new QPushButton(QStringLiteral("浏览…"), m_paramsCard);
-    fileRow->addWidget(filePosLabel);
-    fileRow->addWidget(m_inputFileEdit, 1);
-    fileRow->addWidget(m_browseInputButton);
-    inputLayout->addLayout(fileRow);
+    m_openInputLocationButton =
+        new QPushButton(QStringLiteral("打开所在位置"), m_paramsCard);
+    m_openInputLocationButton->setToolTip(
+        QStringLiteral("在资源管理器中打开所选文件所在位置"));
+    QHBoxLayout *fileInputRow = new QHBoxLayout();
+    fileInputRow->setSpacing(8);
+    fileInputRow->addWidget(m_inputFileEdit, 1);
+    fileInputRow->addWidget(m_browseInputButton);
+    fileInputRow->addWidget(m_openInputLocationButton);
+    QVBoxLayout *fileFieldLayout = new QVBoxLayout();
+    fileFieldLayout->setSpacing(2);
+    fileFieldLayout->addLayout(fileLabelRow);
+    fileFieldLayout->addLayout(fileInputRow);
+    inputLayout->addLayout(fileFieldLayout);
     singleLayout->addWidget(m_paramsCard);
 
     // Card 2: format + parameters
@@ -401,10 +419,18 @@ void MainWindow::buildUi()
     QVBoxLayout *outputLayout = new QVBoxLayout(outputCard);
     outputLayout->setContentsMargins(16, 14, 16, 14);
     outputLayout->setSpacing(10);
-    QHBoxLayout *outputRow = new QHBoxLayout();
-    QLabel *outputPosLabel = new QLabel(QStringLiteral("输出位置"), outputCard);
-    outputPosLabel->setStyleSheet(
+    // 标签单独一行（含红色必填星号），输入框在下方、间距更近。
+    m_outputPosLabel = new QLabel(QStringLiteral("输出位置"), outputCard);
+    m_outputPosLabel->setStyleSheet(
         QStringLiteral("font-weight: bold; color: #000000;"));
+    m_outputRequiredMark = new QLabel(QStringLiteral("*"), outputCard);
+    m_outputRequiredMark->setStyleSheet(
+        QStringLiteral("color: #e53935; font-weight: bold;"));
+    QHBoxLayout *outputLabelRow = new QHBoxLayout();
+    outputLabelRow->setSpacing(2);
+    outputLabelRow->addWidget(m_outputPosLabel);
+    outputLabelRow->addWidget(m_outputRequiredMark);
+    outputLabelRow->addStretch(1);
     m_outputEdit = new QLineEdit(outputCard);
     m_outputEdit->setPlaceholderText(
         QStringLiteral("输出哈希文件路径（默认与源文件同目录）"));
@@ -416,15 +442,25 @@ void MainWindow::buildUi()
     m_outputSuffixCombo->setToolTip(
         QStringLiteral("输出哈希文件的后缀（内容均为纯文本哈希）"));
     m_browseOutputButton = new QPushButton(QStringLiteral("浏览…"), outputCard);
+    m_openOutputLocationButton =
+        new QPushButton(QStringLiteral("打开所在位置"), outputCard);
+    m_openOutputLocationButton->setToolTip(
+        QStringLiteral("在资源管理器中打开输出文件所在位置"));
     m_sendButton = new QPushButton(QStringLiteral("发送"), outputCard);
     m_sendButton->setToolTip(
         QStringLiteral("把当前单选设置发送到批量列表"));
-    outputRow->addWidget(outputPosLabel);
-    outputRow->addWidget(m_outputEdit, 1);
-    outputRow->addWidget(m_outputSuffixCombo);
-    outputRow->addWidget(m_browseOutputButton);
-    outputRow->addWidget(m_sendButton);
-    outputLayout->addLayout(outputRow);
+    QHBoxLayout *outputInputRow = new QHBoxLayout();
+    outputInputRow->setSpacing(8);
+    outputInputRow->addWidget(m_outputEdit, 1);
+    outputInputRow->addWidget(m_outputSuffixCombo);
+    outputInputRow->addWidget(m_browseOutputButton);
+    outputInputRow->addWidget(m_openOutputLocationButton);
+    outputInputRow->addWidget(m_sendButton);
+    QVBoxLayout *outputFieldLayout = new QVBoxLayout();
+    outputFieldLayout->setSpacing(2);
+    outputFieldLayout->addLayout(outputLabelRow);
+    outputFieldLayout->addLayout(outputInputRow);
+    outputLayout->addLayout(outputFieldLayout);
     singleLayout->addWidget(outputCard);
 
     // Convert button
@@ -596,6 +632,21 @@ void MainWindow::buildUi()
             SLOT(browseInputFile()));
     connect(m_browseOutputButton, SIGNAL(clicked()), this,
             SLOT(browseOutputFile()));
+    connect(m_openInputLocationButton, SIGNAL(clicked()), this,
+            SLOT(openInputLocation()));
+    connect(m_openOutputLocationButton, SIGNAL(clicked()), this,
+            SLOT(openOutputLocation()));
+    // 输入框有内容后，必填标签恢复黑色。
+    connect(m_inputFileEdit, &QLineEdit::textChanged, this,
+            [this](const QString &) {
+                m_fileLabel->setStyleSheet(
+                    QStringLiteral("font-weight: bold; color: #000000;"));
+            });
+    connect(m_outputEdit, &QLineEdit::textChanged, this,
+            [this](const QString &) {
+                m_outputPosLabel->setStyleSheet(
+                    QStringLiteral("font-weight: bold; color: #000000;"));
+            });
     connect(m_sendButton, SIGNAL(clicked()), this,
             SLOT(sendCurrentToBatch()));
     connect(m_outputSuffixCombo, SIGNAL(currentIndexChanged(int)), this,
@@ -1067,6 +1118,60 @@ void MainWindow::browseOutputFile()
     }
 }
 
+void MainWindow::openInputLocation()
+{
+    QString file = m_inputFileEdit->text().trimmed();
+    if(file.isEmpty())
+    {
+        setStatus(QStringLiteral("请先选择加密文件"), true);
+        return;
+    }
+    QFileInfo info(file);
+    if(info.exists())
+    {
+        QProcess::startDetached(
+            QStringLiteral("explorer.exe"),
+            QStringList() << QStringLiteral("/select,")
+                          << QDir::toNativeSeparators(info.absoluteFilePath()));
+    }
+    else
+    {
+        QProcess::startDetached(
+            QStringLiteral("explorer.exe"),
+            QStringList()
+                << QDir::toNativeSeparators(info.absolutePath()));
+    }
+}
+
+void MainWindow::openOutputLocation()
+{
+    QString out = m_outputEdit->text().trimmed();
+    if(out.isEmpty())
+    {
+        setStatus(QStringLiteral("请先指定输出哈希文件路径"), true);
+        return;
+    }
+    QFileInfo info(out);
+    if(info.exists())
+    {
+        QProcess::startDetached(
+            QStringLiteral("explorer.exe"),
+            QStringList() << QStringLiteral("/select,")
+                          << QDir::toNativeSeparators(info.absoluteFilePath()));
+    }
+    else if(info.dir().exists())
+    {
+        QProcess::startDetached(
+            QStringLiteral("explorer.exe"),
+            QStringList()
+                << QDir::toNativeSeparators(info.absolutePath()));
+    }
+    else
+    {
+        setStatus(QStringLiteral("输出位置目录不存在"), true);
+    }
+}
+
 QString MainWindow::currentSuffix() const
 {
     if(!m_outputSuffixCombo)
@@ -1155,13 +1260,23 @@ void MainWindow::convert()
     QString outputFile = m_outputEdit->text().trimmed();
     QString formatName = m_formatCombo->currentText();
 
+    // 必填标签先恢复黑色，缺失的再标红。
+    m_fileLabel->setStyleSheet(
+        QStringLiteral("font-weight: bold; color: #000000;"));
+    m_outputPosLabel->setStyleSheet(
+        QStringLiteral("font-weight: bold; color: #000000;"));
+
     if(inputFile.isEmpty())
     {
+        m_fileLabel->setStyleSheet(
+            QStringLiteral("font-weight: bold; color: #e53935;"));
         setStatus(QStringLiteral("请先选择要提取的加密文件"), true);
         return;
     }
     if(outputFile.isEmpty())
     {
+        m_outputPosLabel->setStyleSheet(
+            QStringLiteral("font-weight: bold; color: #e53935;"));
         setStatus(QStringLiteral("请指定输出哈希文件路径"), true);
         return;
     }

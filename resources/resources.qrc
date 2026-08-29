@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>style.qss</file>
         <file>icons/combo_arrow.png</file>
+        <file>icons/logo.png</file>
     </qresource>
 </RCC>

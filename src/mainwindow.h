@@ -66,6 +66,8 @@ protected:
 private slots:
     void browseInputFile();
     void browseOutputFile();
+    void openInputLocation();
+    void openOutputLocation();
     void outputSuffixChanged(int index);
     void browseJtrDir();
     void categoryChanged(int index);
@@ -114,6 +116,9 @@ private:
 
     QLineEdit       *m_inputFileEdit;
     QPushButton     *m_browseInputButton;
+    QPushButton     *m_openInputLocationButton;
+    QLabel          *m_fileLabel;
+    QLabel          *m_fileRequiredMark;
     QComboBox       *m_formatCombo;
     QComboBox       *m_categoryCombo;
     QLabel          *m_hashcatLabel;
@@ -122,6 +127,9 @@ private:
     QLineEdit       *m_outputEdit;
     QComboBox       *m_outputSuffixCombo;
     QPushButton     *m_browseOutputButton;
+    QPushButton     *m_openOutputLocationButton;
+    QLabel          *m_outputPosLabel;
+    QLabel          *m_outputRequiredMark;
     QPushButton     *m_sendButton;
     QPushButton     *m_scanButton;
     QPushButton     *m_convertButton;

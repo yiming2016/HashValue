@@ -21,4 +21,5 @@ HEADERS += src/mainwindow.h \
            src/hashcathelper.h
 
 RESOURCES += resources/resources.qrc
+RC_ICONS = resources/icons/logo.ico
 CODECFORTR = UTF-8

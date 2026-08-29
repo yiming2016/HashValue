@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="resources/icons/logo.png" width="128" alt="HashValue 图标" />
+</p>
+
 # HashValue —— 哈希提取工具
 
 把加密文件（zip / 7z / rar / Office / PDF 等）快速转换成 **hashcat 可直接使用**的哈希文件。
